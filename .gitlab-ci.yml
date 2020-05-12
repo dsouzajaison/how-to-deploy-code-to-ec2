@@ -1,0 +1,40 @@
+stages:
+        - build
+        - deploy
+build:
+        stage: build
+        image: linux
+        before_script:
+                - apt-get install zip
+        ## here I have only one test.txt which i want to push in ec2 instance 
+        script:
+                - mkdir public
+                - cp -R test.txt public/
+                - zip -r public.zip public
+        artifacts:
+                paths:
+                        - public.zip # saves as zip file
+        # give the tags which you have given when creating the runner , if no tags given then delete this tags key
+        tags:
+                - linux
+                - shell
+deploy:
+        stage: deploy
+        image: linux
+        before_script:
+                - apt-get install openssh-client
+                - eval $(ssh-agent -s)
+                - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - # SSH_PRIVATE_KEY is the name of the key that must be included in the variables in gitlab repo
+                - mkdir -p ~/.ssh
+                - chmod 700 ~/.ssh
+               
+        script:
+                - ls  
+                # copy zipped foler to ec2
+                - scp -o StrictHostkeyChecking=no public.zip ec2-user@ec2-xx-xxx-xxx-xxx.<region>.compute.amazonaws.com:~/. 
+                # also shows how to tun commands using ssh . example creating a file called foo1.txt , unzipping folder
+                - ssh -o StrictHostkeyChecking=no ec2-user@ec2-xx-xxx-xxx-xxx.<region>.compute.amazonaws.com " touch foo1.txt; unzip -o public.zip"
+        # give the tags which you have given when creating the runner , if no tags given then delete this tags key
+        tags:
+                - linux
+                - shell
